@@ -1,0 +1,104 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Expenses</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container py-4">
+    <h2 class="mb-4">Expenses</h2>
+
+    <form id="expenseForm" class="row g-2 mb-4">
+        <input type="hidden" id="id">
+        <div class="col-md-2"><input id="value" type="number" step="0.01" class="form-control" placeholder="Value" required></div>
+        <div class="col-md-2"><input id="date" type="date" class="form-control" required></div>
+        <div class="col-md-3"><input id="description" class="form-control" placeholder="Description" required></div>
+        <div class="col-md-3"><input id="category" class="form-control" placeholder="Category"></div>
+        <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Save</button></div>
+    </form>
+
+    <table class="table table-striped">
+        <thead>
+            <tr><th>Value</th><th>Date</th><th>Description</th><th>Category</th><th></th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+    </table>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+    const api = "/api/expenses";
+
+    // GET: load and show all expenses
+    function load() {
+      $.get(api, function (data) {
+        $("#rows").empty();
+        data.forEach(function (e) {
+          const tr = $("<tr>");
+          tr.append($("<td>").text(e.value));
+          tr.append($("<td>").text(e.date.substring(0, 10)));
+          tr.append($("<td>").text(e.description));
+          tr.append($("<td>").text(e.category || ""));
+          tr.append($("<td>").html(
+            '<button class="btn btn-sm btn-warning edit me-1" data-id="' + e.id + '">Edit</button>' +
+            '<button class="btn btn-sm btn-danger delete" data-id="' + e.id + '">Delete</button>'
+          ));
+          $("#rows").append(tr);
+        });
+      });
+    }
+
+    // POST or PUT: save (new expense or existing one)
+    $("#expenseForm").on("submit", function (ev) {
+      ev.preventDefault();
+      const id = $("#id").val();
+      const expense = {
+        id: id ? parseInt(id) : 0,
+        value: parseFloat($("#value").val()),
+        description: $("#description").val(),
+        category: $("#category").val()
+        };
+
+      const expense = {
+        id: id ? parseInt(id) : 0,
+        value: parseFloat($("#value").val()),
+        date: $("#date").val(),
+        description: $("#description").val(),
+        category: $("#category").val()
+        };
+
+      $.ajax({
+        url: id ? api + "/" + id : api,
+        type: id ? "PUT" : "POST",
+        contentType: "application/json",
+        data: JSON.stringify(expense),
+        success: function () {
+          $("#expenseForm")[0].reset();
+          $("#id").val("");
+          load();
+        },
+        error: function (xhr) { alert("Error: " + xhr.status); }
+      });
+    });
+
+    // GET one: fill the form for editing
+    $("#rows").on("click", ".edit", function () {
+      $.get(api + "/" + $(this).data("id"), function (e) {
+        $("#id").val(e.id);
+        $("#value").val(e.value);
+        $("#description").val(e.description);
+        $("#category").val(e.category);
+        $("#date").val(e.date.substring(0, 10));
+      });
+    });
+
+    // DELETE
+    $("#rows").on("click", ".delete", function () {
+      if (!confirm("Delete this expense?")) return;
+      $.ajax({ url: api + "/" + $(this).data("id"), type: "DELETE", success: load });
+    });
+
+    load();
+    </script>
+</body>
+</html>
