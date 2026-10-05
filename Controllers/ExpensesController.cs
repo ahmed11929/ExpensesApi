@@ -14,12 +14,44 @@ namespace ExpensesApi.Controllers
             _context = context;
         }
 
+        // GET api/expenses
+        // GET api/expenses?category=Food&from=2026-10-01&to=2026-10-31
         [HttpGet]
-        public IActionResult GetAll()
+        public IActionResult GetAll(string? category, DateTime? from, DateTime? to)
         {
-            return Ok(_context.Expenses.ToList());
+            var query = _context.Expenses.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(category))
+                query = query.Where(e => e.Category == category);
+
+            if (from.HasValue)
+                query = query.Where(e => e.Date >= from.Value);
+
+            if (to.HasValue)
+                query = query.Where(e => e.Date <= to.Value);
+
+            return Ok(query.OrderByDescending(e => e.Date).ToList());
         }
 
+        // GET api/expenses/summary
+        [HttpGet("summary")]
+        public IActionResult Summary()
+        {
+            var result = _context.Expenses
+                .GroupBy(e => e.Category)
+                .Select(g => new
+                {
+                    Category = g.Key,
+                    Total = g.Sum(e => e.Value),
+                    Count = g.Count()
+                })
+                .OrderByDescending(x => x.Total)
+                .ToList();
+
+            return Ok(result);
+        }
+
+        // GET api/expenses/5
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
@@ -28,6 +60,7 @@ namespace ExpensesApi.Controllers
             return Ok(expense);
         }
 
+        // POST api/expenses
         [HttpPost]
         public IActionResult Create(Expense expense)
         {
@@ -36,6 +69,7 @@ namespace ExpensesApi.Controllers
             return CreatedAtAction(nameof(GetById), new { id = expense.Id }, expense);
         }
 
+        // PUT api/expenses/5
         [HttpPut("{id}")]
         public IActionResult Update(int id, Expense expense)
         {
@@ -49,6 +83,7 @@ namespace ExpensesApi.Controllers
             return NoContent();
         }
 
+        // DELETE api/expenses/5
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
