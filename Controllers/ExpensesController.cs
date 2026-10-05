@@ -1,4 +1,5 @@
 ﻿using ExpensesApi.Models;
+using ExpensesApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExpensesApi.Controllers
@@ -7,91 +8,61 @@ namespace ExpensesApi.Controllers
     [Route("api/[controller]")]
     public class ExpensesController : ControllerBase
     {
-        private readonly SpendSmartDbContext _context;
+        private readonly IExpenseService _service;
 
-        public ExpensesController(SpendSmartDbContext context)
+        public ExpensesController(IExpenseService service)
         {
-            _context = context;
+            _service = service;
         }
 
-        // GET api/expenses
         // GET api/expenses?category=Food&from=2026-10-01&to=2026-10-31
         [HttpGet]
-        public IActionResult GetAll(string? category, DateTime? from, DateTime? to)
+        public async Task<IActionResult> GetAll(string? category, DateTime? from, DateTime? to)
         {
-            var query = _context.Expenses.AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(category))
-                query = query.Where(e => e.Category == category);
-
-            if (from.HasValue)
-                query = query.Where(e => e.Date >= from.Value);
-
-            if (to.HasValue)
-                query = query.Where(e => e.Date <= to.Value);
-
-            return Ok(query.OrderByDescending(e => e.Date).ToList());
+            return Ok(await _service.GetAllAsync(category, from, to));
         }
 
         // GET api/expenses/summary
         [HttpGet("summary")]
-        public IActionResult Summary()
+        public async Task<IActionResult> Summary()
         {
-            var result = _context.Expenses
-                .GroupBy(e => e.Category)
-                .Select(g => new
-                {
-                    Category = g.Key,
-                    Total = g.Sum(e => e.Value),
-                    Count = g.Count()
-                })
-                .OrderByDescending(x => x.Total)
-                .ToList();
-
-            return Ok(result);
+            return Ok(await _service.GetSummaryAsync());
         }
 
         // GET api/expenses/5
         [HttpGet("{id}")]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            var expense = _context.Expenses.Find(id);
+            var expense = await _service.GetByIdAsync(id);
             if (expense == null) return NotFound();
             return Ok(expense);
         }
 
         // POST api/expenses
         [HttpPost]
-        public IActionResult Create(Expense expense)
+        public async Task<IActionResult> Create(Expense expense)
         {
-            _context.Expenses.Add(expense);
-            _context.SaveChanges();
-            return CreatedAtAction(nameof(GetById), new { id = expense.Id }, expense);
+            var created = await _service.CreateAsync(expense);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
         // PUT api/expenses/5
         [HttpPut("{id}")]
-        public IActionResult Update(int id, Expense expense)
+        public async Task<IActionResult> Update(int id, Expense expense)
         {
             if (id != expense.Id) return BadRequest("Id in URL and body must match.");
 
-            var existing = _context.Expenses.Find(id);
-            if (existing == null) return NotFound();
-
-            _context.Entry(existing).CurrentValues.SetValues(expense);
-            _context.SaveChanges();
+            var updated = await _service.UpdateAsync(id, expense);
+            if (!updated) return NotFound();
             return NoContent();
         }
 
         // DELETE api/expenses/5
         [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var expense = _context.Expenses.Find(id);
-            if (expense == null) return NotFound();
-
-            _context.Expenses.Remove(expense);
-            _context.SaveChanges();
+            var deleted = await _service.DeleteAsync(id);
+            if (!deleted) return NotFound();
             return NoContent();
         }
     }

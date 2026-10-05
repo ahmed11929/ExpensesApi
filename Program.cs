@@ -1,4 +1,5 @@
 using ExpensesApi.Models;
+using ExpensesApi.Services;   // NEW
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +10,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<SpendSmartDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IExpenseService, ExpenseService>();   // NEW
 
 var app = builder.Build();
 
@@ -23,5 +26,4 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthorization();
 app.MapControllers();
-
 app.Run();
