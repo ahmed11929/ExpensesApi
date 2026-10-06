@@ -11,7 +11,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<SpendSmartDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<IExpenseService, ExpenseService>();   // NEW
+builder.Services.AddScoped<IExpenseService, ExpenseService>();
+builder.Services.AddScoped<IBudgetService, BudgetService>();    // NEW
 
 var app = builder.Build();
 
